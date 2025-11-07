@@ -3,13 +3,47 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
+enum UserType {
+  CONSULTANT
+  COSTUMER
+}
+
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  createdAt DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  name       String
+  email      String   @unique
+  phone      String
+  cpf        String
+  address    String
+  state      String
+  zipCode    String
+  complement String?
+  age        Int
+  userType   UserType @default(CONSULTANT)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relação 1:N — um consultor pode ter vários clientes vinculados
+  clients     ConsultantClient[] @relation("ConsultantToClients")
+  consultants ConsultantClient[] @relation("ClientToConsultants")
+}
+
+model ConsultantClient {
+  id           Int      @id @default(autoincrement())
+  consultantId Int
+  clientId     Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relações duplas (consultor e cliente, ambos Users)
+  consultant User @relation("ConsultantToClients", fields: [consultantId], references: [id])
+  client     User @relation("ClientToConsultants", fields: [clientId], references: [id])
+  userId     Int?
+
+  @@unique([consultantId, clientId]) // evita duplicações
+  @@map("pivot_consultant_clients")
 }

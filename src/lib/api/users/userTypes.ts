@@ -1,4 +1,4 @@
-export type User = {
+export interface User {
     id: number;
     name: string;
     email: string;
@@ -24,3 +24,10 @@ export type CreateUser = {
     address: string;
     complement: string;
 };
+
+export interface ConsultantsFilters {
+    name?: string,
+    email?: string,
+    startDate?: string,
+    endDate?: string
+}
