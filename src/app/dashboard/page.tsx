@@ -1,27 +1,33 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { use, useEffect, useState } from 'react';
 import Image from 'next/image';
 import axios from 'axios';
-import { createUser, fetchUsers } from '@/lib/api/users/users';
+import { createUser, fetchConsultants, fetchFilteredConsultants } from '@/lib/api/users/users';
 import logo from '@/assets/logo.png';
-import { CreateUser } from '@/lib/api/users/userTypes';
+import { ConsultantsFilters, CreateUser, User } from '@/lib/api/users/userTypes';
 import { UserCreateModal } from '@/components/modal';
 
-type User = {
-  id: number;
-  name: string;
-  email: string;
-  createdAt: string;
-};
+
 
 export default function DashboardPage() {
-  const [users, setUsers] = useState<User[]>([]);
   const [name, setName] = useState('');
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [consultant, setConsultant] = useState("John Doe");
+  const [consultant, setConsultant] = useState<User[]>([]);
+  const [clients, setClients] = useState<User[]>([]);
+  // console.log("🚀 ~ DashboardPage ~ clients:", clients)
   const [email, setEmail] = useState("johndoe@gmail.com");
-  const [period, setPeriod] = useState("21/10/2025 até 21/12/2025");
+  const [startDate, setStartDate] = useState("21/10/2025");
+  const [endDate, setEndDate] = useState(" 21/12/2025");
+
+  useEffect(() => {
+    const fetch = async () => {
+      const data = await fetchConsultants()
+      setConsultant(data)
+      return data
+    }
+    fetch()
+  }, [])
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const clienteMock = [
@@ -49,6 +55,22 @@ export default function DashboardPage() {
     }
   ];
 
+  // useEffect(() => {
+  //   const fetch = async () => {
+  //     const data = await fetchFilteredConsultants({ name, email, startDate, endDate });
+  //     console.log("🚀 ~ fetch ~ data:", data)
+  //     setClients(data.clients)
+  //   }
+  //   fetch()
+
+  // }, [name, email, startDate, endDate]);
+
+  const searchHandler = async () => {
+    const data = await fetchFilteredConsultants({ name, email, startDate, endDate });
+    console.log("🚀 ~ fetch ~ data:", data)
+    setClients(data.clients)
+  }
+
 
   const handleOpenCreateModal = () => setIsCreateModalOpen(true);
   const handleCloseCreateModal = () => setIsCreateModalOpen(false);
@@ -66,40 +88,6 @@ export default function DashboardPage() {
   };
 
 
-  // useEffect(() => {
-  //   fetchUsers();
-  // }, []);
-
-  const startEdit = (u: User) => {
-    setEditingId(u.id);
-    setName(u.name);
-    setEmail(u.email);
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setName('');
-    setEmail('');
-  };
-
-  const saveEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingId) return;
-    const res = await axios.put('/api/users/' + editingId, { name, email });
-    if (res.status >= 200 && res.status < 300) {
-      cancelEdit();
-      fetchUsers();
-    } else {
-      alert('Erro ao atualizar');
-    }
-  };
-
-  const deleteUser = async (id: number) => {
-    if (!confirm('Confirma exclusão?')) return;
-    const res = await axios.delete('/api/users/' + id);
-    if (res.status >= 200 && res.status < 300) fetchUsers();
-    else alert('Erro ao excluir');
-  };
 
   return (
     <div className=' w-full h-full'>
@@ -132,32 +120,65 @@ export default function DashboardPage() {
               <div className="flex flex-row items-center gap-2">
                 <label className="text-xs text-gray-400 mb-1">Nome do consultor</label>
                 <select
-                  value={consultant}
-                  onChange={(e) => setConsultant(e.target.value)}
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value)
+                    searchHandler()
+                  }}
                   className="bg-[#222729] border border-[#2a2e38] text-[#B0B7BE] px-3 py-1 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
                 >
-                  <option>John Doe</option>
-                  <option>Maria Silva</option>
-                  <option>Carlos Souza</option>
+                  {
+                    consultant?.map((cons) => {
+                      return (
+                        <option key={cons.id}>{cons?.name}</option>
+                      )
+                    })
+                  }
+
                 </select>
               </div>
 
               <div className="flex flex-row items-center gap-2">
                 <label className="text-xs text-gray-400 mb-1">Email do consultor</label>
-                <input
-                  type="email"
+                <select
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-[#222729] border border-[#2a2e38] text-[#B0B7BE] px-3 py-1 rounded-md w-52 focus:outline-none focus:ring-1 focus:ring-green-500"
-                />
+
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    searchHandler()
+                  }}
+
+                  className="bg-[#222729] border border-[#2a2e38] text-[#B0B7BE] px-3 py-1 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                >
+                  {
+                    consultant?.map((cons) => {
+                      return (
+                        <option key={cons.id}>{cons?.email}</option>
+                      )
+                    })
+                  }
+
+                </select>
               </div>
 
               <div className="flex flex-row items-center gap-2">
                 <label className="text-xs text-gray-400 mb-1">Período</label>
                 <input
-                  type="text"
-                  value={period}
-                  onChange={(e) => setPeriod(e.target.value)}
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value)
+                    searchHandler()
+                  }}
+                  className="bg-[#222729] border border-[#2a2e38] text-[#B0B7BE] px-3 py-1 rounded-md w-56 focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value)
+                    searchHandler()
+                  }}
                   className="bg-[#222729] border border-[#2a2e38] text-[#B0B7BE] px-3 py-1 rounded-md w-56 focus:outline-none focus:ring-1 focus:ring-green-500"
                 />
               </div>
